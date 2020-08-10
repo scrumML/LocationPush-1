@@ -276,7 +276,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 //            Toast.makeText(this, "Ad did not load", Toast.LENGTH_SHORT).show();
 //        }
 //    }
-
+//
 
 
 
