@@ -279,6 +279,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 
 
 
+
+
     /**
      * Apply for permissions.
      */
