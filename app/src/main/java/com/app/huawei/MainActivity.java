@@ -304,8 +304,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         requestPermission(MULTIPROCESSOR_ASYN_CODE, DECODE);
     }
 public void openLocationBtnClick(View view){
-        System.out.println("openLocationBtnClick 调用");
-    requestLocationUpdatesWithCallback();
+    startActivity(new Intent(MainActivity.this, RequestLocationUpdatesWithCallbackActivity.class));
+
 }
     /**
      * Start generating the barcode. 生成 QR Code, 并 启动插屏广告

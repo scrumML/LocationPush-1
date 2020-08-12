@@ -79,6 +79,10 @@
         <activity
             android:name=".camera.camera.CapturePhotoActivity"
             android:theme="@style/Theme.AppCompat" />
+        <activity
+            android:name=".RequestLocationUpdatesWithCallbackActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|keyboardHidden|orientation"
+            android:theme="@style/Theme.AppCompat" />
     </application>
 
 </manifest>
