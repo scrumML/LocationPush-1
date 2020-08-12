@@ -206,4 +206,7 @@
     <string name="ad_id_splash">testd7c5cewoj6</string>
     <string name="owner">HUAWEI Developer</string>
     <string name="copyright_info">Copyright 2020. Huawei Technologies Co., Ltd</string>
+    <string name="open_location_kit">Open Location Kit</string>
+    <string name="tiao_zhuang_jie_mian">TIAO ZHUANG JIE MIAN</string>
+    <string name="open_locaton_kit">Open Locaton Kit</string>
 </resources>

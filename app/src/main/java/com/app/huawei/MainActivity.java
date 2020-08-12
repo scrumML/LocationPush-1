@@ -26,6 +26,7 @@ import android.text.TextUtils;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
@@ -73,6 +74,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_mwcmain);
+
         this.getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         //Set noTitleBar.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -82,6 +84,16 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
             }
         }
+
+//        //添加 location kit 监听, 弃用，改用最下面的  locationBtnClick
+//        Button button_location = findViewById(R.id.button_location);
+//        button_location.setOnClickListener(new View.OnClickListener(){
+//            @Override
+//            public void onClick(View v) {
+//                Intent intent = new Intent(MainActivity.this, RequestLocationUpdatesWithCallbackActivity.class);
+//                startActivity(intent);
+//            }
+//        });
 
         /**
          * BannerView广告
@@ -97,15 +109,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         // 添加监听器
         bannerView.setAdListener(adListener);
 
-//        //添加 location kit 监听
-//        Button button_location = findViewById(R.id.button_location);
-//        button_location.setOnClickListener(new View.OnClickListener(){
-//            @Override
-//            public void onClick(View v) {
-//                Intent intent = new Intent(MainActivity.this, RequestLocationUpdatesWithCallbackActivity.class);
-//                startActivity(intent);
-//            }
-//        });
+
 
     }
 
@@ -409,6 +413,10 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
                 startActivity(intent);
             }
         }
+    }
+
+    public void locationBtnClick(View view) {
+        startActivity(new Intent(MainActivity.this, RequestLocationUpdatesWithCallbackActivity.class));
     }
 
 
