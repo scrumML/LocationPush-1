@@ -18,11 +18,15 @@ package com.app.huawei;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.os.Parcelable;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -32,10 +36,24 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 
 import com.app.huawei.camera.camera.MainTransferActivity;
+import com.huawei.hmf.tasks.OnFailureListener;
+import com.huawei.hmf.tasks.OnSuccessListener;
 import com.huawei.hms.ads.BannerAdSize;
 import com.huawei.hms.ads.InterstitialAd;
 import com.huawei.hms.ads.banner.BannerView;
+import com.huawei.hms.common.ApiException;
+import com.huawei.hms.common.ResolvableApiException;
 import com.huawei.hms.hmsscankit.ScanUtil;
+import com.huawei.hms.location.FusedLocationProviderClient;
+import com.huawei.hms.location.LocationAvailability;
+import com.huawei.hms.location.LocationCallback;
+import com.huawei.hms.location.LocationRequest;
+import com.huawei.hms.location.LocationResult;
+import com.huawei.hms.location.LocationServices;
+import com.huawei.hms.location.LocationSettingsRequest;
+import com.huawei.hms.location.LocationSettingsResponse;
+import com.huawei.hms.location.LocationSettingsStatusCodes;
+import com.huawei.hms.location.SettingsClient;
 import com.huawei.hms.ml.scan.HmsScan;
 import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions;
 //
@@ -43,6 +61,7 @@ import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions;
 import com.huawei.hms.ads.AdListener;
 import com.huawei.hms.ads.AdParam;
 
+import java.util.List;
 import java.util.Locale;
 
 
@@ -67,6 +86,15 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     //给插屏广告 提供 TAG
     private static final String TAG = MainActivity.class.getSimpleName();
     public InterstitialAd interstitialAd;
+
+    // the callback of the request
+    LocationCallback mLocationCallback;
+
+    LocationRequest mLocationRequest;
+
+    private FusedLocationProviderClient fusedLocationProviderClient;
+
+    private SettingsClient settingsClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,6 +134,69 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 //                startActivity(intent);
 //            }
 //        });
+
+
+
+        // create fusedLocationProviderClient
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        // create settingsClient
+        settingsClient = LocationServices.getSettingsClient(this);
+        mLocationRequest = new LocationRequest();
+        // Set the interval for location updates, in milliseconds.
+        mLocationRequest.setInterval(10000);
+        // set the priority of the request
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        if (null == mLocationCallback) {
+            mLocationCallback = new LocationCallback() {
+                @Override
+                public void onLocationResult(LocationResult locationResult) {
+                    if (locationResult != null) {
+                        List<Location> locations = locationResult.getLocations();
+                        if (!locations.isEmpty()) {
+                            for (Location location : locations) {
+                                Log.i(TAG,
+                                        "onLocationResult location[Longitude,Latitude,Accuracy]:" + location.getLongitude()
+                                                + "," + location.getLatitude() + "," + location.getAccuracy());
+                            }
+                        }
+                    }
+                }
+
+                @Override
+                public void onLocationAvailability(LocationAvailability locationAvailability) {
+                    if (locationAvailability != null) {
+                        boolean flag = locationAvailability.isLocationAvailable();
+                        Log.i(TAG, "onLocationAvailability isLocationAvailable:" + flag);
+                    }
+                }
+            };
+        }
+
+        // check location permisiion
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            Log.i(TAG, "sdk < 28 Q");
+            if (ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                String[] strings =
+                        {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
+                ActivityCompat.requestPermissions(this, strings, 1);
+            }
+        } else {
+            if (ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(this,
+                    "android.permission.ACCESS_BACKGROUND_LOCATION") != PackageManager.PERMISSION_GRANTED) {
+                String[] strings = {android.Manifest.permission.ACCESS_FINE_LOCATION,
+                        android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                        "android.permission.ACCESS_BACKGROUND_LOCATION"};
+                ActivityCompat.requestPermissions(this, strings, 2);
+            }
+        }
 
     }
 
@@ -212,7 +303,10 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     public void multiProcessorAsynBtnClick(View view) {
         requestPermission(MULTIPROCESSOR_ASYN_CODE, DECODE);
     }
-
+public void openLocationBtnClick(View view){
+        System.out.println("openLocationBtnClick 调用");
+    requestLocationUpdatesWithCallback();
+}
     /**
      * Start generating the barcode. 生成 QR Code, 并 启动插屏广告
      */
@@ -279,7 +373,61 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
 //
 // 第一次改动？
 
-
+    /**
+     * function：Requests location updates with a callback on the specified Looper thread.
+     * first：use SettingsClient object to call checkLocationSettings(LocationSettingsRequest locationSettingsRequest) method to check device settings.
+     * second： use  FusedLocationProviderClient object to call requestLocationUpdates (LocationRequest request, LocationCallback callback, Looper looper) method.
+     */
+    private void requestLocationUpdatesWithCallback() {
+        try {
+            LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+            builder.addLocationRequest(mLocationRequest);
+            LocationSettingsRequest locationSettingsRequest = builder.build();
+            // check devices settings before request location updates.
+            settingsClient.checkLocationSettings(locationSettingsRequest)
+                    .addOnSuccessListener(new OnSuccessListener<LocationSettingsResponse>() {
+                        @Override
+                        public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
+                            Log.i(TAG, "check location settings success");
+                            // request location updates
+                            fusedLocationProviderClient
+                                    .requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.getMainLooper())
+                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                        @Override
+                                        public void onSuccess(Void aVoid) {
+                                            Log.i(TAG, "requestLocationUpdatesWithCallback onSuccess");
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(Exception e) {
+                                            Log.e(TAG,
+                                                    "requestLocationUpdatesWithCallback onFailure:" + e.getMessage());
+                                        }
+                                    });
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(Exception e) {
+                            Log.e(TAG, "checkLocationSetting onFailure:" + e.getMessage());
+                            int statusCode = ((ApiException) e).getStatusCode();
+                            switch (statusCode) {
+                                case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                                    try {
+                                        ResolvableApiException rae = (ResolvableApiException) e;
+                                        rae.startResolutionForResult(MainActivity.this, 0);
+                                    } catch (IntentSender.SendIntentException sie) {
+                                        Log.e(TAG, "PendingIntent unable to execute request.");
+                                    }
+                                    break;
+                            }
+                        }
+                    });
+        } catch (Exception e) {
+            Log.e(TAG, "requestLocationUpdatesWithCallback exception:" + e.getMessage());
+        }
+    }
 
     /**
      * Apply for permissions.
